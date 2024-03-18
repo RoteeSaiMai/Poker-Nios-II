@@ -31,7 +31,7 @@ int compareCardRanks(const void *a, const void *b);
 bool isFlush(const Card *cards[], int num_cards);
 bool isStraight(const Card *cards[], int num_cards);
 int countDuplicates(const Card *cards[], int num_cards);
-int getHighestCardValue(const Card *cards[], int num_cards);
+Card *getHighestCardValue(const Card *cards[], int num_cards);
 int getKickerValue(const Card *cards[], int num_cards, int exclude_value);
 int evaluateHand(const Card *cards[], int num_cards);
 

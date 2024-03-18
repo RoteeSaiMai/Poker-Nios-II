@@ -88,11 +88,25 @@ int countDuplicates(const Card *cards[], int num_cards) {
   return count;
 }
 
+// Helper function to compare card ranks and suits (for sorting)
+int compareCard(const void *a, const void *b) {
+  int rank_diff = (*(Card **)b)->rank - (*(Card **)a)->rank;
+  if (rank_diff == 0) {
+    return (*(Card **)b)->suit - (*(Card **)a)->suit;
+  }
+  return rank_diff;
+
+  // positive: b is higher than a
+  // negative: a is higher than b
+  // equal: someone is cheating
+}
+
 // Helper function to get the value of the highest card in the hand
-int getHighestCardValue(const Card *cards[], int num_cards) {
+// Helper function to get the value of the highest card in the hand
+Card *getHighestCardValue(const Card *cards[], int num_cards) {
   // Sort cards by rank
-  qsort(cards, num_cards, sizeof(Card *), compareCardRanks);
-  return cards[0]->rank;
+  qsort(cards, num_cards, sizeof(Card *), compareCard);
+  return cards[0]; // Return the pointer to the highest card in the hand
 }
 
 // Helper function to get the value of the kicker (highest card not part of a
@@ -174,20 +188,22 @@ int evaluateHand(const Card *cards[], int num_cards) {
 // individual cards
 int compareHands(const Card *hand1[], int num_cards_hand1, const Card *hand2[],
                  int num_cards_hand2) {
-  int hand1_best_card = getHighestCardValue(hand1, num_cards_hand1);
-
-  int hand2_best_card = getHighestCardValue(hand2, num_cards_hand2);
-
-  if (hand1_best_card > hand2_best_card) {
-    printf("Best card rank:");
-    printHandRank(hand1_best_card);
+  Card *hand1_best_card = getHighestCardValue(hand1, num_cards_hand1);
+  Card *hand2_best_card = getHighestCardValue(hand2, num_cards_hand2);
+  int compareResult =
+      compareCard((const void *)hand1_best_card, (const void *)hand2_best_card);
+  if (compareResult < 0) {
+    // Hand 1 is better than hand 2
+    printf("Best card:");
+    printCard(hand1_best_card);
     return 1; // hand 1 wins
-  } else if (hand2_best_card > hand1_best_card) {
-    printf("Best card rank:");
-    printHandRank(hand2_best_card);
+  } else if (compareResult > 0) {
+    printf("Best card:");
+    printCard(hand2_best_card);
     return -1; // hand 2 wins
   } else {
-    printf("\nCard rank match, comparing suits\n");
+    printf("\n Someone is cheating bruh\n");
+    return 0; // Return 0 in case of a tie
   }
 }
 

@@ -88,12 +88,47 @@ int countDuplicates(const Card *cards[], int num_cards) {
   return count;
 }
 
-// Helper function to get the value of the highest card in the hand
-int getHighestCardValue(const Card *cards[], int num_cards) {
-  // Sort cards by rank
-  qsort(cards, num_cards, sizeof(Card *), compareCardRanks);
-  return cards[0]->rank;
+// Helper function to compare card ranks and suits (for sorting)
+int compareCard(const void *a, const void *b) {
+  int rank_diff = (*(Card **)b)->rank - (*(Card **)a)->rank;
+  if (rank_diff == 0) {
+    return (*(Card **)b)->suit - (*(Card **)a)->suit;
+  }
+  return rank_diff;
+
+  // positive: b is higher than a
+  // negative: a is higher than b
+  // equal: someone is cheating
 }
+
+// Helper function to get the value of the highest card in the hand
+// Helper function to get the value of the highest card in the hand
+Card *getHighestCardValue(const Card *cards[], int num_cards) {
+  // Sort cards by rank
+  qsort(cards, num_cards, sizeof(Card *), compareCard);
+  return cards[0]; // Return the pointer to the highest card in the hand
+}
+
+/*int main() {
+  // Example hand of cards
+  Card *hand[] = {
+      &(Card){TEN, HEARTS},     // 10 of Hearts
+      &(Card){QUEEN, DIAMONDS}, // Q of Diamonds
+      &(Card){QUEEN, CLUBS},    // Queen of Clubs
+      &(Card){TWO, SPADES},     // 2 of Spades
+      &(Card){QUEEN, SPADES}    // 7 of Diamonds
+  };
+  int num_cards = sizeof(hand) / sizeof(hand[0]);
+
+  // Get the highest card value in the hand
+  Card *highest_card = getHighestCardValue(hand, num_cards);
+
+  // Print the highest card value
+  printf("Highest Card: Rank %s, Suit %s\n", rankToString(highest_card->rank),
+         suitToString(highest_card->suit));
+
+  return 0;
+}*/
 
 // Helper function to get the value of the kicker (highest card not part of a
 // pair/trip/quad)
@@ -169,27 +204,78 @@ int evaluateHand(const Card *cards[], int num_cards) {
   // High card
   return HIGH_CARD;
 }
+/*int main() {
+  // Example hand
+  Card *hand[5];
+  hand[0] = createCard(ACE, HEARTS);
+  hand[1] = createCard(KING, DIAMONDS);
+  hand[2] = createCard(QUEEN, SPADES);
+  hand[3] = createCard(JACK, CLUBS);
+  hand[4] = createCard(TEN, HEARTS);
+  int num_cards = sizeof(hand) / sizeof(hand[0]);
 
-// Function to compare two hands and determine the winner based on the
-// individual cards
+  // Evaluate hand
+  int hand_strength = evaluateHand(hand, num_cards);
+
+  printHandRank(hand_strength);
+
+  return 0;
+}*/
+
 int compareHands(const Card *hand1[], int num_cards_hand1, const Card *hand2[],
                  int num_cards_hand2) {
-  int hand1_best_card = getHighestCardValue(hand1, num_cards_hand1);
+  printf("\nComparing hands...\n");
 
-  int hand2_best_card = getHighestCardValue(hand2, num_cards_hand2);
+  // Find the best card for each hand
+  Card *hand1_best_card = getHighestCardValue(hand1, num_cards_hand1);
+  Card *hand2_best_card = getHighestCardValue(hand2, num_cards_hand2);
 
-  if (hand1_best_card > hand2_best_card) {
-    printf("Best card rank:");
-    printHandRank(hand1_best_card);
-    return 1; // hand 1 wins
-  } else if (hand2_best_card > hand1_best_card) {
-    printf("Best card rank:");
-    printHandRank(hand2_best_card);
-    return -1; // hand 2 wins
+  if (hand1_best_card == NULL || hand2_best_card == NULL) {
+    printf("Error: Unable to find the best card for comparison.\n");
+    return 0; // Handle the error condition
+  }
+
+  // Compare the best cards
+  int compareResult = compareCard((const void *)&hand1_best_card,
+                                  (const void *)&hand2_best_card);
+
+  if (compareResult < 0) {
+    printf("Player 1 wins with the best card:\n");
+    printCard(hand1_best_card);
+    return 1;
+  } else if (compareResult > 0) {
+    printf("Player 2 wins with the best card:\n");
+    printCard(hand2_best_card);
+    return -1;
   } else {
-    printf("\nCard rank match, comparing suits\n");
+    printf("It's a tie.\n");
+    return 0;
   }
 }
+
+/*
+int main() {
+  // Example hand 1
+  Card *hand1[2];
+  hand1[0] = createCard(ACE, HEARTS);
+  hand1[1] = createCard(QUEEN, DIAMONDS);
+  int num_cards_hand1 = sizeof(hand1) / sizeof(hand1[0]);
+  // Example hand 2
+  Card *hand2[2];
+  hand2[0] = createCard(TEN, HEARTS);
+  hand2[1] = createCard(ACE, SPADES);
+  int num_cards_hand2 = sizeof(hand2) / sizeof(hand2[0]);
+
+  // Compare hands
+  int winner = compareHands(hand1, num_cards_hand1, hand2, num_cards_hand2);
+
+  // Free memory for each card
+  for (int i = 0; i < 5; i++) {
+    destroyCard(hand1[i]);
+    destroyCard(hand2[i]);
+  }
+  return 0;
+}*/
 
 // Function to determine the winner of the game
 int determineWinner(Player players[], int num_players,

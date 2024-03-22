@@ -8,7 +8,14 @@ Input/Output:
 - VGA Display
 
 Task delegations:
-- Game implementation (card system, player actions, hands, community etc): Cartoon
+- Game implementation: Cartoon
+  -  Base struct: Card, Deck, Community, Hand and Player
 - Game Logic (how the game plays out): Cartoon
+  -  Player actions
+  -  Money system
+  -  Hand evaluating system
 - I\O: Alex
+  - Mouse input
+  - Keyboard input
+  - VGA display
 - Enemy AI: Alex

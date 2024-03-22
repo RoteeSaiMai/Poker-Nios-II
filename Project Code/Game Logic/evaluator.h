@@ -28,6 +28,7 @@ Card **collectAllCards(Player *players, int num_players,
 int compareHands(const Card *hand1[], int num_cards_hand1, const Card *hand2[],
                  int num_cards_hand2);
 int compareCardRanks(const void *a, const void *b);
+int compareCardRanks(const void *a, const void *b);
 bool isFlush(const Card *cards[], int num_cards);
 bool isStraight(const Card *cards[], int num_cards);
 int countDuplicates(const Card *cards[], int num_cards);

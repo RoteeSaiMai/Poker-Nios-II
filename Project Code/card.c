@@ -69,12 +69,3 @@ void destroyCard(Card *card) { free(card); }
 void printCard(const Card *card) {
   printf("%s of %s\n", rankToString(card->rank), suitToString(card->suit));
 }
-
-// somehow main can't find this function? (it's also in card.c)
-void printCardArray(const Card *cards[], int num_cards) {
-  printf("Cards:\n");
-  for (int i = 0; i < num_cards; i++) {
-    printf("%d. %s of %s\n", i + 1, rankToString(cards[i]->rank),
-           suitToString(cards[i]->suit));
-  }
-}

@@ -41,7 +41,7 @@ void showHand(const Player *player) {
 void showAllPlayerHand(Player players[], int num_players) {
   for (int i = 0; i < num_players; i++) {
     printf("Player %d:", i + 1);
-    printHand(&players->hand);
+    printHand(&players[i].hand);
     printf("\n");
   }
 }

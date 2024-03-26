@@ -309,41 +309,6 @@ int main() {
 
       // Evaluate hands and determine winner
       printf("\nEvaluating hands...\n");
-      // Collect all cards
-      int total_cards = NUM_PLAYERS * 2 + community.num_cards;
-      Card *all_cards[total_cards];
-      int cardIndex = 0;
-      for (int i = 0; i < NUM_PLAYERS; i++) {
-        Card **playerCards = getAllCardsInHand(&players[i]);
-        for (int j = 0; j < 2; j++) {
-          all_cards[cardIndex++] = playerCards[j];
-        }
-      }
-      for (int i = 0; i < community.num_cards; i++) {
-        all_cards[cardIndex++] = &community.cards[i];
-      }
-
-      // Evaluate hands
-      int ranks[NUM_PLAYERS];
-      for (int i = 0; i < NUM_PLAYERS; i++) {
-        Card *allCards[2 + MAX_COMMUNITY_CARDS];
-        int total_cards = 2 + community.num_cards;
-        Card **playerCards = getAllCardsInHand(&players[i]);
-        for (int j = 0; j < 2; j++) {
-          allCards[j] = playerCards[j];
-        }
-        Card **communityCards = getAllCardsInCommunity(&community);
-        for (int j = 0; j < community.num_cards; j++) {
-          allCards[2 + j] = communityCards[j];
-        }
-        ranks[i] = evaluateHand(allCards, total_cards);
-      }
-
-      printf("\nHand Ranks:\n");
-      for (int i = 0; i < NUM_PLAYERS; i++) {
-        printf("Player %d: ", i + 1);
-        printHandRank(ranks[i]);
-      }
 
       // Above this is kinda redundant
       winner_index = determineWinner(players, NUM_PLAYERS, &community);

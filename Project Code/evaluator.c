@@ -361,6 +361,11 @@ int determineWinner(Player players[], int num_players,
     printf("Player %d's hand rank: ", i + 1);
     printHandRank(rank);
 
+    if (players[i].folded) {
+      printf("Player %d has folded, so will not be accounted.\n", i + 1);
+      rank = -1;
+    }
+
     if (rank > best_rank) {
       best_rank = rank;
       best_player = i;

@@ -44,9 +44,28 @@ bool checkGameEnd(Player players[], int num_players) {
   // printf("checking gem end sldkfjlkjsdkljf");
   int active_players = 0;
 
-  // Count active players and calculate total money
+  // Count active players
   for (int i = 0; i < num_players; i++) {
     if (!players[i].folded) {
+      active_players++;
+    }
+  }
+
+  if (active_players == 1)
+    return true;
+  return false;
+}
+
+// Function to check if the game should end early
+bool checkAllIn(Player players[], int num_players) {
+  // printf("checking gem end sldkfjlkjsdkljf");
+  int active_players = 0;
+
+  printf("\nAll in prompts early end\n");
+
+  // Count active players
+  for (int i = 0; i < num_players; i++) {
+    if (!players[i].folded && players[i].money != 0) {
       active_players++;
     }
   }
@@ -59,6 +78,9 @@ bool checkGameEnd(Player players[], int num_players) {
 // idk why this doens't work if i put it in the main and pass it as a
 // pointer???????? im too dumb for this
 int current_bet;
+int max_bet;
+bool all_in;
+bool all_in_sustain;
 
 // Function to handle the betting round
 void bettingRound(Player players[], int num_players, int *pot) {
@@ -68,7 +90,7 @@ void bettingRound(Player players[], int num_players, int *pot) {
 
   // Loop through players and handle their actions
   for (int i = 0; i < num_players; i++) {
-    if (!players[i].folded) {
+    if (!players[i].folded && players[i].money != 0) {
       printf("Player %d's turn.\n", i + 1);
       Action action = getPlayerAction(&players[i]);
       switch (action) {
@@ -76,12 +98,22 @@ void bettingRound(Player players[], int num_players, int *pot) {
         players[i].folded = true;
         break;
       case BET:
+        if (all_in) {
+          printf(
+              "\nA player had gone all-in, betting is not a possible action\n");
+          i--;
+          break;
+        }
+
         printf("Enter bet amount (minimum: %d): ", current_bet);
         scanf("%d", &bet_amount);
         if (bet_amount >= current_bet) {
           if (bet_amount <= players[i].money) {
             *pot += bet_amount;
-            current_bet = bet_amount;
+            max_bet = (bet_amount > max_bet) ? bet_amount : max_bet;
+            all_in = (bet_amount == players[i].money) ? true : all_in;
+            all_in_sustain =
+                (bet_amount == players[i].money) ? true : all_in_sustain;
             takeMoney(&players[i], bet_amount);
           } else {
             printf("Bet amount must not exceed the money you have\n");
@@ -99,6 +131,10 @@ void bettingRound(Player players[], int num_players, int *pot) {
           if (bet_amount <= players[i].money) {
             *pot += bet_amount;
             current_bet = bet_amount;
+            max_bet = (bet_amount > max_bet) ? bet_amount : max_bet;
+            all_in = (bet_amount == players[i].money) ? true : all_in;
+            all_in_sustain =
+                (bet_amount == players[i].money) ? true : all_in_sustain;
             takeMoney(&players[i], bet_amount);
           } else {
             printf("Bet amount must not exceed the money you have\n");
@@ -121,16 +157,40 @@ void bettingRound(Player players[], int num_players, int *pot) {
         break;
 
       case CALL:
-        *pot += current_bet;
-        takeMoney(&players[i], current_bet);
+        if (max_bet > 0) {
+          if (max_bet <= players[i].money) {
+            *pot += max_bet;
+            all_in = (max_bet == players[i].money) ? true : all_in;
+            all_in_sustain =
+                (max_bet == players[i].money) ? true : all_in_sustain;
+            takeMoney(&players[i], max_bet);
+          } else {
+            printf("Bet amount must not exceed the money you have\n");
+            i--;
+          }
+        } else {
+          printf("You cannot call on the first round\n");
+          i--;
+        }
         break;
       case CHECK:
+        if (all_in) {
+          printf("\nA player had gone all-in, checking is not a possible "
+                 "action\n");
+          i--;
+          break;
+        }
         // Do nothing, move to the next player
         break;
       case ALL_IN:
         if (players[i].money > 0) {
+          current_bet =
+              (current_bet > players[i].money) ? current_bet : players[i].money;
           *pot += players[i].money;
+          max_bet = (current_bet > max_bet) ? current_bet : max_bet;
           takeMoney(&players[i], players[i].money);
+          all_in = true;
+          all_in_sustain = true;
         } else {
           printf("You have no money left");
           i--;
@@ -171,6 +231,9 @@ int main() {
 
   while (true) {
     // Deduct blinds from players' money
+
+    all_in = false;
+    all_in_sustain = false;
 
     bool gameEnd = false;
 
@@ -217,6 +280,15 @@ int main() {
     }
     printCommunityCards(&community);
 
+    if (checkAllIn(players, NUM_PLAYERS)) {
+      goto gameEnd;
+    }
+    if (all_in_sustain) {
+      all_in_sustain = false;
+    } else {
+      all_in = false;
+    }
+
     printAllPlayerMoney(players, NUM_PLAYERS);
     printf("Pot: %d\n\n", pot);
 
@@ -237,6 +309,15 @@ int main() {
     addCardToCommunity(&community, drawTopCardFromDeck(&deck));
     printCommunityCards(&community);
 
+    if (checkAllIn(players, NUM_PLAYERS)) {
+      goto gameEnd;
+    }
+    if (all_in_sustain) {
+      all_in_sustain = false;
+    } else {
+      all_in = false;
+    }
+
     printAllPlayerMoney(players, NUM_PLAYERS);
     printf("Pot: %d\n\n", pot);
 
@@ -256,6 +337,15 @@ int main() {
     printf("\nRiver:\n");
     addCardToCommunity(&community, drawTopCardFromDeck(&deck));
     printCommunityCards(&community);
+
+    if (checkAllIn(players, NUM_PLAYERS)) {
+      goto gameEnd;
+    }
+    if (all_in_sustain) {
+      all_in_sustain = false;
+    } else {
+      all_in = false;
+    }
 
     printAllPlayerMoney(players, NUM_PLAYERS);
 
@@ -340,6 +430,7 @@ int main() {
 
     if (playerBroke) {
       printf("Rip no money :(((((\n");
+      printAllPlayerMoney(players, NUM_PLAYERS);
       printf("\n\nEnding the game...\n");
       break;
     }

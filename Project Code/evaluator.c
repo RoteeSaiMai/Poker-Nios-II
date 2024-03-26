@@ -96,8 +96,20 @@ int countDuplicates(const Card *cards[], int num_cards) {
     }
   }
 
-  printf("count: %d\n", count);
+  // printf("count: %d\n", count);
   return count;
+}
+
+// Helper function to count the occurrences of each rank in the hand (THIS DONT
+// WORK  ?????? -_-)
+void countRanks(const Card *cards[], int num_cards, int rank_counts[]) {
+  // Initialize rank_counts array to zeros
+  memset(rank_counts, 0, sizeof(int) * 13);
+
+  // Count the occurrences of each rank
+  for (int i = 0; i < num_cards; i++) {
+    rank_counts[cards[i]->rank]++;
+  }
 }
 
 // Helper function to compare card ranks and suits (for sorting)
@@ -163,28 +175,44 @@ int evaluateHand(const Card *cards[], int num_cards) {
   bool straight = isStraight(cards, num_cards);
 
   if (flush && straight) {
-    // Check for a straight flush or a royal flush
+
+    // Royal flush
+    if (cards[0]->rank == ACE && cards[1]->rank >= KING &&
+        cards[2]->rank >= QUEEN && cards[3]->rank >= JACK &&
+        cards[4]->rank >= TEN) {
+      return ROYAL_FLUSH;
+    }
+
     for (int i = 0; i < num_cards - 1; i++) {
       if (cards[i]->rank != cards[i + 1]->rank + 1) {
         return STRAIGHT_FLUSH;
       }
     }
+  }
 
-    // Royal flush
-    if (cards[0]->rank == TEN && cards[num_cards - 1]->rank == ACE) {
-      return ROYAL_FLUSH;
-    }
+  int dupeCount = countDuplicates(cards, num_cards);
+
+  // Check for four of a kind
+  if (dupeCount == 4) {
+    return FOUR_OF_A_KIND;
   }
 
   // Check for full house
-  if (countDuplicates(cards, num_cards) == 2) {
-    // Check if the first three cards are the same rank (full house)
-    if (cards[0]->rank == cards[2]->rank) {
-      return FULL_HOUSE;
-    }
-    // Check if the last three cards are the same rank (full house)
-    if (cards[num_cards - 1]->rank == cards[num_cards - 3]->rank) {
-      return FULL_HOUSE;
+  if (dupeCount == 3) {
+    // Loop through all cards to find possible three of a kind and two of a kind
+    // combinations
+    for (int i = 0; i < num_cards - 2; i++) {
+      if (cards[i]->rank == cards[i + 1]->rank &&
+          cards[i]->rank == cards[i + 2]->rank) {
+        // We found a three of a kind at index i
+        for (int j = 0; j < num_cards - 1; j++) {
+          if (j != i && j + 1 != i && j + 2 != i &&
+              cards[j]->rank == cards[j + 1]->rank) {
+            // We found a two of a kind at index j
+            return FULL_HOUSE;
+          }
+        }
+      }
     }
   }
 
@@ -196,13 +224,6 @@ int evaluateHand(const Card *cards[], int num_cards) {
   // Check for straight
   if (straight) {
     return STRAIGHT;
-  }
-
-  int dupeCount = countDuplicates(cards, num_cards);
-
-  // Check for four of a kind
-  if (dupeCount == 4) {
-    return FOUR_OF_A_KIND;
   }
 
   // Check for three of a kind
@@ -233,6 +254,14 @@ int evaluateHand(const Card *cards[], int num_cards) {
 }
 /*
 int main() {
+ #include "card.h"
+#include "community.h"
+#include "deck.h"
+#include "evaluator.h"
+#include "player.h"
+#include <stdio.h>
+
+int main() {
   // Example hand
   Card *hand[7];
   hand[0] = createCard(ACE, SPADES);
@@ -251,6 +280,7 @@ int main() {
   printHandRank(hand_strength);
 
   return 0;
+}
 }*/
 
 int compareHands(const Card *hand1[], int num_cards_hand1, const Card *hand2[],
@@ -271,11 +301,11 @@ int compareHands(const Card *hand1[], int num_cards_hand1, const Card *hand2[],
                                   (const void *)&hand2_best_card);
 
   if (compareResult < 0) {
-    printf("Player 1 wins with the best card:\n");
+    // printf("Player 1 wins with the best card:\n");
     printCard(hand1_best_card);
     return 1;
   } else if (compareResult > 0) {
-    printf("Player 2 wins with the best card:\n");
+    // printf("Player 2 wins with the best card:\n");
     printCard(hand2_best_card);
     return -1;
   } else {
@@ -308,7 +338,6 @@ int main() {
   return 0;
 }*/
 
-// Function to determine the winner of the game
 int determineWinner(Player players[], int num_players,
                     CommunityCards *community) {
   int best_rank = HIGH_CARD; // Initialize with the lowest rank
@@ -329,7 +358,6 @@ int determineWinner(Player players[], int num_players,
     int rank = evaluateHand(allCards, total_cards);
 
     // Update best rank and player if necessary
-
     printf("Player %d's hand rank: ", i + 1);
     printHandRank(rank);
 
@@ -338,30 +366,68 @@ int determineWinner(Player players[], int num_players,
       best_player = i;
     } else if (rank == best_rank) {
       // Handle tie
-      printf("\nTwo of the same ranks, comparing raw card value...");
-
-      const Card *hand1[2 + MAX_COMMUNITY_CARDS];
-      const Card *hand2[2 + MAX_COMMUNITY_CARDS];
-      for (int j = 0; j < 2; j++) {
-        hand1[j] = playerCards[j];
-        hand2[j] = playerCards[j]; // Use the same player's cards for comparison
-      }
-      for (int j = 0; j < community->num_cards; j++) {
-        hand1[2 + j] = communityCards[j];
-        hand2[2 + j] = communityCards[j];
-      }
-      int result = compareHands(hand1, total_cards, hand2, total_cards);
-      if (result > 0) {
+      printf("\nTwo players have the same rank.\n");
+      int result =
+          compareHands(players[best_player].hand.cards, MAX_CARDS_PER_HAND,
+                       players[i].hand.cards, MAX_CARDS_PER_HAND);
+      if (result < 0) {
+        // Update best player if the current player has a better comparison hand
+        // value
         best_player = i;
       }
-
-      printf("\nPlayer %d has the higest rank\n", best_player + 1);
     }
   }
 
+  printf("\nBest hand rank: ");
+  printHandRank(best_rank);
+  printf("Winner: Player %d\n", best_player + 1);
   printf("\n");
-  return best_player; // Return the index of the winning player
+  return best_player; // Return the index of the winning
 }
+
+/*
+#include "card.h"
+#include "community.h"
+#include "deck.h"
+#include "evaluator.h"
+#include "player.h"
+#include <stdio.h>
+
+int main() {
+  // Example players
+  Player players[2];
+  initializePlayer(&players[0], 0);
+  initializePlayer(&players[1], 0);
+
+  // Example community cards
+  CommunityCards community;
+  initializeCommunityCards(&community);
+  addCardToCommunity(&community, createCard(ACE, SPADES));
+  addCardToCommunity(&community, createCard(KING, SPADES));
+  addCardToCommunity(&community, createCard(QUEEN, SPADES));
+  addCardToCommunity(&community, createCard(JACK, SPADES));
+  addCardToCommunity(&community, createCard(TEN, SPADES));
+
+  // Player 1's hand
+  addCardToHand(&players[0].hand, createCard(TWO, SPADES));
+  addCardToHand(&players[0].hand, createCard(THREE, SPADES));
+
+  // Player 2's hand
+  addCardToHand(&players[1].hand, createCard(NINE, SPADES));
+  addCardToHand(&players[1].hand, createCard(EIGHT, SPADES));
+
+  // Evaluate winner
+  int winner = determineWinner(players, 2, &community);
+
+  // Clean up memory
+  destroyPlayer(&players[0]);
+  destroyPlayer(&players[1]);
+  destroyCommunityCards(&community);
+
+  return 0;
+}
+}
+  */
 
 void printHandRank(int hand_rank) {
   // Print the hand rank

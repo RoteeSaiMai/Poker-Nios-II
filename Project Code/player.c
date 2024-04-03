@@ -5,6 +5,7 @@
 void initializePlayer(Player *player, int initial_money) {
   initializeHand(&player->hand);
   player->money = initial_money;
+  player->moneySpent = 0;
 
   // Enable all actions by default
   for (int i = 0; i < NUM_ACTIONS; i++) {
@@ -49,6 +50,7 @@ void showAllPlayerHand(Player players[], int num_players) {
 void resetPlayer(Player *player) {
   destroyHand(&player->hand);
   player->folded = false;
+  player->moneySpent = 0;
   // Enable all actions by default
   for (int i = 0; i < NUM_ACTIONS; i++) {
     player->available_actions[i] = true;
@@ -59,7 +61,10 @@ void resetPlayer(Player *player) {
 void giveMoney(Player *player, int amount) { player->money += amount; }
 
 // Function to take money from a player
-void takeMoney(Player *player, int amount) { player->money -= amount; }
+void takeMoney(Player *player, int amount) {
+  player->money -= amount;
+  player->moneySpent += amount;
+}
 
 // Function to get pointers to all the cards in a player's hand
 Card **getAllCardsInHand(const Player *player) { return player->hand.cards; }

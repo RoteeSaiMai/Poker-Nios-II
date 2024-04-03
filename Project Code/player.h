@@ -11,10 +11,12 @@ typedef struct {
   int money;
   bool folded; // Flag to track whether player has folded or not
   bool available_actions[NUM_ACTIONS]; // Array to store available actions
+  int moneySpent;
 } Player;
 
 void initializePlayer(Player *player, int initial_money);
 void printPlayer(const Player *player);
+void printMoney(const Player *player);
 void printAllPlayerMoney(Player players[], int num_players);
 void showHand(const Player *player);
 void showAllPlayerHand(Player players[], int num_players);

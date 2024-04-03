@@ -13,6 +13,8 @@
 #define SMALL_BLIND_AMOUNT 5
 #define INITIAL_PLAYER_MONEY 100
 
+#define INFINITY 99999999
+
 // Function to prompt player for action
 Action getPlayerAction(Player *player) {
   Action action;
@@ -61,7 +63,7 @@ bool checkAllIn(Player players[], int num_players) {
   // printf("checking gem end sldkfjlkjsdkljf");
   int active_players = 0;
 
-  printf("\nAll in prompts early end\n");
+  // printf("\nAll in prompts early end\n");
 
   // Count active players
   for (int i = 0; i < num_players; i++) {
@@ -70,7 +72,7 @@ bool checkAllIn(Player players[], int num_players) {
     }
   }
 
-  if (active_players == 1)
+  if (active_players <= 1)
     return true;
   return false;
 }
@@ -87,124 +89,248 @@ void bettingRound(Player players[], int num_players, int *pot) {
   // Initialize current_bet only once at the start of the round
   // int current_bet = 0; // The current bet amount
   int bet_amount = 0;
+  int total_bet = 0;
 
-  // Loop through players and handle their actions
-  for (int i = 0; i < num_players; i++) {
-    if (!players[i].folded && players[i].money != 0) {
-      printf("Player %d's turn.\n", i + 1);
-      Action action = getPlayerAction(&players[i]);
-      switch (action) {
-      case FOLD:
-        players[i].folded = true;
-        break;
-      case BET:
-        if (all_in) {
-          printf(
-              "\nA player had gone all-in, betting is not a possible action\n");
-          i--;
+  bool roundEnd = false;
+  bool sameTurn = false;
+  int playerMoneySpent = INFINITY; // high as possible
+
+  while (!roundEnd) {
+
+    // printf("current money spent: %d", playerMoneySpent);
+
+    // Loop through players and handle their actions
+    for (int i = 0; i < num_players; i++) {
+      if (!players[i].folded && players[i].money != 0 &&
+          players[i].moneySpent < playerMoneySpent) {
+
+        printf("\nPlayer %d's turn.\n", i + 1);
+
+        char input[100];
+        while (!sameTurn) {
+
+          printf("Type 'begin' to continue: ");
+          scanf("%s", input);
+
+          // If user inputs "begin", break out of the loop
+          if (strcmp(input, "begin") == 0) {
+            printf("Proceeding...\n");
+            break;
+          } else {
+            printf("You typed: %s\n", input);
+          }
+        }
+
+        if (!sameTurn) {
+          showHand(&players[i]);
+          printf("Money Betted: $%d\n", players[i].moneySpent);
+          printf("Money Left: $%d\n", players[i].money);
+        }
+
+        sameTurn = false;
+
+        Action action = getPlayerAction(&players[i]);
+        switch (action) {
+        case FOLD:
+          players[i].folded = true;
           break;
-        }
+        case BET:
+          if (all_in) {
+            printf("\nA player had gone all-in, betting is not a possible "
+                   "action\n");
+            i--;
+            sameTurn = true;
+            break;
+          }
 
-        printf("Enter bet amount (minimum: %d): ", current_bet);
-        scanf("%d", &bet_amount);
-        if (bet_amount >= current_bet) {
-          if (bet_amount <= players[i].money) {
-            *pot += bet_amount;
-            max_bet = (bet_amount > max_bet) ? bet_amount : max_bet;
-            all_in = (bet_amount == players[i].money) ? true : all_in;
-            all_in_sustain =
-                (bet_amount == players[i].money) ? true : all_in_sustain;
-            takeMoney(&players[i], bet_amount);
+          printf("Enter bet amount (minimum: %d): ",
+                 current_bet - players[i].moneySpent);
+          scanf("%d", &bet_amount);
+          total_bet = bet_amount + players[i].moneySpent;
+          if (total_bet >= current_bet) {
+            if (bet_amount <= players[i].money) {
+              *pot += bet_amount;
+              //  makes bet basically the same as a raise
+              current_bet = (total_bet > current_bet) ? total_bet : current_bet;
+              max_bet = (total_bet > max_bet) ? total_bet : max_bet;
+              all_in = (bet_amount == players[i].money) ? true : all_in;
+              all_in_sustain =
+                  (bet_amount == players[i].money) ? true : all_in_sustain;
+              takeMoney(&players[i], bet_amount);
+            } else {
+              printf("Bet amount must not exceed the money you have\n");
+              sameTurn = true;
+              i--;
+            }
           } else {
-            printf("Bet amount must not exceed the money you have\n");
+            printf("Bet amount must be at least $%d.\n", current_bet);
+            sameTurn = true;
             i--;
           }
-        } else {
-          printf("Bet amount must be at least %d.\n", current_bet);
-          i--;
-        }
-        break;
-      case RAISE:
-        printf("Enter raise amount (minimum: %d): ", current_bet * 2);
-        scanf("%d", &bet_amount);
-        if (bet_amount >= current_bet * 2) {
-          if (bet_amount <= players[i].money) {
-            *pot += bet_amount;
-            current_bet = bet_amount;
-            max_bet = (bet_amount > max_bet) ? bet_amount : max_bet;
-            all_in = (bet_amount == players[i].money) ? true : all_in;
-            all_in_sustain =
-                (bet_amount == players[i].money) ? true : all_in_sustain;
-            takeMoney(&players[i], bet_amount);
-          } else {
-            printf("Bet amount must not exceed the money you have\n");
-            i--;
-          }
-        } else {
-          printf("Raise amount must be at least %d.\n", current_bet * 2);
-          i--;
-        }
-        break;
-
-        printf("Does this spot ever get reached?");
-
-        // Adjust pot and current_bet
-        *pot += bet_amount;
-        current_bet = bet_amount;
-
-        // Take money from the player
-        takeMoney(&players[i], bet_amount);
-        break;
-
-      case CALL:
-        if (max_bet > 0) {
-          if (max_bet <= players[i].money) {
-            *pot += max_bet;
-            all_in = (max_bet == players[i].money) ? true : all_in;
-            all_in_sustain =
-                (max_bet == players[i].money) ? true : all_in_sustain;
-            takeMoney(&players[i], max_bet);
-          } else {
-            printf("Bet amount must not exceed the money you have\n");
-            i--;
-          }
-        } else {
-          printf("You cannot call on the first round\n");
-          i--;
-        }
-        break;
-      case CHECK:
-        if (all_in) {
-          printf("\nA player had gone all-in, checking is not a possible "
-                 "action\n");
-          i--;
           break;
-        }
-        // Do nothing, move to the next player
-        break;
-      case ALL_IN:
-        if (players[i].money > 0) {
-          current_bet =
-              (current_bet > players[i].money) ? current_bet : players[i].money;
-          *pot += players[i].money;
-          max_bet = (current_bet > max_bet) ? current_bet : max_bet;
-          takeMoney(&players[i], players[i].money);
-          all_in = true;
-          all_in_sustain = true;
-        } else {
-          printf("You have no money left");
+        case RAISE:
+          if (current_bet == 0) {
+            printf("You cannot raise as no one has bet yet this round\n");
+            sameTurn = true;
+            i--;
+            break;
+          }
+          printf("Enter raise amount (minimum: %d): ",
+                 (current_bet * 2) - players[i].moneySpent);
+          scanf("%d", &bet_amount);
+          total_bet = bet_amount + players[i].moneySpent;
+          if (total_bet >= current_bet * 2) {
+            if (bet_amount <= players[i].money) {
+              *pot += bet_amount;
+              current_bet = bet_amount;
+              max_bet = (total_bet > max_bet) ? total_bet : max_bet;
+              all_in = (bet_amount == players[i].money) ? true : all_in;
+              all_in_sustain =
+                  (bet_amount == players[i].money) ? true : all_in_sustain;
+              takeMoney(&players[i], bet_amount);
+            } else {
+              printf("Bet amount must not exceed the money you have\n");
+              sameTurn = true;
+              i--;
+            }
+          } else {
+            printf("Raise amount must be at least %d.\n", current_bet * 2);
+            sameTurn = true;
+            i--;
+          }
+          break;
+
+          printf("Does this spot ever get reached?");
+
+          // Adjust pot and current_bet
+          *pot += bet_amount;
+          current_bet = bet_amount;
+
+          // Take money from the player
+          takeMoney(&players[i], bet_amount);
+          break;
+
+        case CALL:
+          if (max_bet > 0) {
+            total_bet = max_bet - players[i].moneySpent;
+            if (total_bet <= players[i].money) {
+              *pot += total_bet;
+              all_in = (total_bet == players[i].money) ? true : all_in;
+              all_in_sustain =
+                  (total_bet == players[i].money) ? true : all_in_sustain;
+              takeMoney(&players[i], total_bet);
+            } else {
+              printf("Bet amount must not exceed the money you have\n");
+              sameTurn = true;
+              i--;
+            }
+          }
+
+          else {
+            printf("You cannot call when no one has bet yet\n");
+            sameTurn = true;
+            i--;
+          }
+          break;
+        case CHECK:
+          if (all_in) {
+            printf("\nA player had gone all-in, checking is not a possible "
+                   "action\n");
+            sameTurn = true;
+            i--;
+            break;
+          } else if (players[i].moneySpent < current_bet ||
+                     playerMoneySpent != INFINITY) {
+            printf("\nYour current bet: $%d, is lower than the minimum raise: "
+                   "$%d\n",
+                   players[i].moneySpent, current_bet);
+            sameTurn = true;
+            i--;
+            break;
+          }
+          // Do nothing, move to the next player
+          break;
+        case ALL_IN:
+          if (players[i].money > 0) {
+            current_bet = (current_bet > players[i].money) ? current_bet
+                                                           : players[i].money;
+            *pot += players[i].money;
+            max_bet = (current_bet > max_bet) ? current_bet : max_bet;
+            takeMoney(&players[i], players[i].money);
+            all_in = true;
+            all_in_sustain = true;
+          } else {
+            printf("You have no money left");
+            sameTurn = true;
+            i--;
+          }
+
+          break;
+        default:
+          printf("Invalid action\n");
+          sameTurn = true;
           i--;
         }
-
-        break;
-      default:
-        printf("Invalid action\n");
-        i--;
+        // printf("\nPot: %d\n", *pot);
       }
-      // printf("\nPot: %d\n", *pot);
+      if (checkGameEnd(players, num_players))
+        break;
     }
-    if (checkGameEnd(players, num_players))
+
+    if (checkGameEnd(players, num_players)) {
+      roundEnd = true;
       break;
+    }
+
+    int currentMoneyBet = 0;
+
+    for (int i = 0; i < num_players; i++) {
+      if (!players[i].folded) {
+        currentMoneyBet = players[i].moneySpent;
+        break; // Skip folded or broke players
+      }
+    }
+
+    // Check if all players have spent the same amount
+    roundEnd = true; // Assume all players have spent the same amount
+    for (int i = 0; i < num_players; i++) {
+      if (players[i].folded || players[i].money == 0) {
+        // printf("player %d has folded\n", i + 1);
+        continue; // Skip folded or broke players
+      }
+      if (players[i].moneySpent != currentMoneyBet) {
+        roundEnd =
+            false; // Set to false if any player hasn't spent the same amount
+
+        if (players[i].moneySpent > currentMoneyBet) {
+          currentMoneyBet = players[i].moneySpent;
+        }
+      }
+    }
+
+    if (!roundEnd) {
+      playerMoneySpent = currentMoneyBet;
+
+      printf("\nOne or more players have not matched the raise amount "
+             "amount.\n");
+      printf("The value of $%d must bet either matched, exceeded or the player "
+             "folds\n",
+             currentMoneyBet);
+
+      for (int i = 0; i < num_players; i++) {
+        if (players[i].folded) {
+          printf("Player %d has folded\n", i + 1);
+        } else {
+          printf("Player %d has bet $%d\n", i + 1, players[i].moneySpent);
+        }
+      }
+      // You might want to reset all_in flags here if needed
+    }
+  }
+
+  // reset player spend amounts
+  for (int i = 0; i < num_players; i++) {
+    players[i].moneySpent = 0;
   }
 }
 
@@ -247,6 +373,7 @@ int main() {
     // reset pot
     pot = SMALL_BLIND_AMOUNT + BIG_BLIND_AMOUNT;
     current_bet = BIG_BLIND_AMOUNT;
+    max_bet = BIG_BLIND_AMOUNT;
 
     // Gameplay loop
 
@@ -256,22 +383,36 @@ int main() {
         addCardToHand(&players[i].hand, drawTopCardFromDeck(&deck));
       }
     }
+    printf("Game Start\n");
+    printf("A small blind of $%d have been taken from Player 1\n",
+           SMALL_BLIND_AMOUNT);
+    printf("A big blind of $%d have been taken from Player 2\n",
+           BIG_BLIND_AMOUNT);
 
-    // we are playing as player 1
     printAllPlayerMoney(players, NUM_PLAYERS);
     printf("Pot: %d\n\n", pot);
 
-    showHand(&players[0]);
-
     // Preflop betting round
     printf("Preflop betting round:\n");
+
+    // curent bet is set to big blind
+    current_bet = BIG_BLIND_AMOUNT;
     bettingRound(players, NUM_PLAYERS, &pot);
     printf("Pot: %d\n", pot);
+
+    // check for flop and update accordingly
+    /*
+    if (players[0].folded) {
+      takeMoney(players[0], SMALL_BLIND_AMOUNT);
+    }
+    if (players[1].folded) {
+      takeMoney(players[1], BIG_BLIND_AMOUNT);
+    }
 
     if (checkGameEnd(players, NUM_PLAYERS)) {
       gameEnd = true;
       goto gameEnd;
-    }
+    }*/
 
     // Deal flop
     printf("\nFlop:\n");
@@ -294,7 +435,7 @@ int main() {
 
     // Flop betting round
     printf("\nFlop betting round:\n");
-    showHand(&players[0]);
+    current_bet = 0;
     bettingRound(players, NUM_PLAYERS, &pot);
 
     printf("Pot: %d\n", pot);
@@ -323,7 +464,7 @@ int main() {
 
     // Turn betting round
     printf("\nTurn betting round:\n");
-    showHand(&players[0]);
+    current_bet = 0;
     bettingRound(players, NUM_PLAYERS, &pot);
     printAllPlayerMoney(players, NUM_PLAYERS);
     printf("Pot: %d\n\n", pot);
@@ -351,7 +492,7 @@ int main() {
 
     // River betting round
     printf("\nRiver betting round:\n");
-    showHand(&players[0]);
+    current_bet = 0;
     bettingRound(players, NUM_PLAYERS, &pot);
 
     if (checkGameEnd(players, NUM_PLAYERS)) {
@@ -573,7 +714,8 @@ int main() {
   }
 
   // Evaluate the hand
-  int hand_rank = evaluateHand(all_cards, num_hand_cards + num_community_cards);
+  int hand_rank = evaluateHand(all_cards, num_hand_cards +
+num_community_cards);
 
   printHandRank(hand_rank);
 
